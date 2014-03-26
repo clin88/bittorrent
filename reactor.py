@@ -34,6 +34,12 @@ class Reactor(object):
             self.peerMngr.peers.remove(peer)
 
     def run(self):
+        """
+        See my comments in bittorrent.py for more info, but my thoughts on the core
+        reactor loop is that this is where decoding/encoding of the raw messages should happen.
+        Then, your peer logic functions can just take and return objects that represent
+        messages, which allows you to hide the complicated bytestring handling code.
+        """
         while not self.peerMngr.checkIfDoneDownloading():
             write = [x for x in self.peerMngr.peers if x.bufferWrite != '']
             read = self.peerMngr.peers[:]

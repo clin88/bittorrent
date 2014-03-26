@@ -56,6 +56,20 @@ def sendRequest(index, offset, length):
     return request
 
 def process_message(peer, peerMngr):
+    """
+    I think this function is probably more complex than necessary because
+    you're conflating parsing logic with message processing. Why not parse
+    the message in the reactor loop and pass an object representing the message
+    to process_message? Then call process_message once for each new message.
+
+    Then your function here will just be your big case structure for each
+    message and the confusing parsing logic can be somewhere else.
+
+    BTW, on a code organization perspective, process_message seems like it
+    should be a method of the peer class? It does take peer as the first
+    argument :).
+    """
+
     while len(peer.bufferRead) > 3:
         if not peer.handshake:
             if not checkValidPeer(peer, peerMngr.infoHash):
@@ -118,6 +132,35 @@ def process_message(peer, peerMngr):
 
             index, offset, length = nextBlock
             peer.bufferWrite = sendRequest(index, offset, length)
+
+            """
+            ^^^
+            Doesn't this make it so that we only send requests if we get a piece?
+            In addition, you now have the send request logic in two places. Perhaps
+            make sendRequest a part of every reactor cycle, instead of as a response
+            to messages from the peer?
+
+            In my client, I have a queue of requests with a max size of ten. Then for every
+            'cycle' of the core loop (I'm using some weird haskell stuff for the loop but it's
+            essentially the same thing) I check
+
+             a.) Am I interested?
+             b.) Am I choked?
+             c.) Is there room in the queue?
+             d.) Are there unrequested blocks remaining in this piece?
+
+            And if all of those conditions are good, then I send a request which I keep track
+            of in my queue. Then every once in a while I clean out the old requests so I keep
+            sending new requests.
+
+            In general I feel like there are two stages in each cycle of the core loop:
+
+              1.) Processing and updating state according to incoming messages.
+              2.) Inspecting internal state to decide what actions to take/what messages to send.
+
+            I think you're missing parts of the 2nd stage or trying to integrate them into
+            the responding to messages part :).
+            """
 
         if not peer.sentInterested:
             print ("Bitfield initalized. "

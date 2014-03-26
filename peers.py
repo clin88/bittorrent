@@ -41,7 +41,9 @@ class PeerManager(object):
         self.peer_id = '-lita38470993887523-'
 
     def isTorrentFinishedDownloading(self):
-        return all([x.finished for x in self.pieces])
+        # minor, but a generator comprehension here will allow you to
+        # stop iterating at the first unfinished
+        return all(x.finished for x in self.pieces)
 
     def generatePieces(self):
         print "Initalizing..."
@@ -64,6 +66,11 @@ class PeerManager(object):
                 counter -= pieceLength
                 pieceHashes = pieceHashes[20:]
 
+    # also a minor thing, but it might be clearer to make helper methods @staticmethod
+    # or factor them out of the class since they don't depend on instance variables.
+    #
+    # @staticmethod
+    # def _chunkToSixBytes(peerString):
     def chunkToSixBytes(self, peerString):
         """
         Helper function to covert the string to 6 byte chunks.
@@ -79,7 +86,8 @@ class PeerManager(object):
         # TODO: move the self.infoHash to init if we need it later.
         params = {'info_hash': self.infoHash,
                   'peer_id': self.peer_id,
-                  'left': str(self.tracker['info']['piece length'])}
+                  'left': str(self.tracker['info']['piece length'])}        # shouldn't 'left' be total size remaining?
+                                                                            # here it's just piece length x 1
         response = requests.get(self.tracker['announce'], params=params)
 
         if response.status_code > 400:
@@ -114,7 +122,8 @@ class PeerManager(object):
         return None
 
     def checkIfDoneDownloading(self):
-        return all([x.finished for x in self.pieces])
+        # see note above
+        return all(x.finished for x in self.pieces)
 
 class Peer(object):
     """
